@@ -24,8 +24,8 @@ var base10Re    = /^[1-9][0-9]*$/,
     base8NegRe  = /^-?0[0-7]+$/,
     numberRe    = /^(?![eE])[0-9]*(?:\.[0-9]*)?(?:[eE][+-]?[0-9]+)?$/,
     nameRe      = /^[a-zA-Z_][a-zA-Z_0-9]*$/,
-    typeRefRe   = /^(?:\.?[a-zA-Z_][a-zA-Z_0-9]*)+$/,
-    fqTypeRefRe = /^(?:\.[a-zA-Z][a-zA-Z_0-9]*)+$/;
+    typeRefRe   = /^(?:\.?[a-zA-Z_][a-zA-Z_0-9]*)(?:\.[a-zA-Z_][a-zA-Z_0-9]*)*$/,
+    fqTypeRefRe = /^(?:\.[a-zA-Z_][a-zA-Z_0-9]*)+$/;
 
 /**
  * Result object returned from {@link parse}.
@@ -41,6 +41,13 @@ var base10Re    = /^[1-9][0-9]*$/,
  * Options modifying the behavior of {@link parse}.
  * @interface IParseOptions
  * @property {boolean} [keepCase=false] Keeps field casing instead of converting to camel case
+ * @property {boolean} [alternateCommentMode=false] Recognize double-slash comments in addition to doc-block comments.
+ */
+
+/**
+ * Options modifying the behavior of JSON serialization.
+ * @interface IToJSONOptions
+ * @property {boolean} [keepComments=false] Serializes comments.
  */
 
 /**
@@ -61,7 +68,7 @@ function parse(source, root, options) {
     if (!options)
         options = parse.defaults;
 
-    var tn = tokenize(source),
+    var tn = tokenize(source, options.alternateCommentMode || false),
         next = tn.next,
         push = tn.push,
         peek = tn.peek,
@@ -270,7 +277,9 @@ function parse(source, root, options) {
     function ifBlock(obj, fnIf, fnElse) {
         var trailingLine = tn.line;
         if (obj) {
-            obj.comment = cmnt(); // try block-type comment
+            if(typeof obj.comment !== "string") {
+              obj.comment = cmnt(); // try block-type comment
+            }
             obj.filename = parse.filename;
         }
         if (skip("{", true)) {
@@ -482,11 +491,19 @@ function parse(source, root, options) {
 
         var enm = new Enum(token);
         ifBlock(enm, function parseEnum_block(token) {
-            if (token === "option") {
-                parseOption(enm, token);
-                skip(";");
-            } else
-                parseEnumValue(enm, token);
+          switch(token) {
+            case "option":
+              parseOption(enm, token);
+              skip(";");
+              break;
+
+            case "reserved":
+              readRanges(enm.reserved || (enm.reserved = []), true);
+              break;
+
+            default:
+              parseEnumValue(enm, token);
+          }
         });
         parent.add(enm);
     }
@@ -547,8 +564,12 @@ function parse(source, root, options) {
                     parseOptionValue(parent, name + "." + token);
                 else {
                     skip(":");
-                    setOption(parent, name + "." + token, readValue(true));
+                    if (peek() === "{")
+                        parseOptionValue(parent, name + "." + token);
+                    else
+                        setOption(parent, name + "." + token, readValue(true));
                 }
+                skip(",", true);
             } while (!skip("}", true));
         } else
             setOption(parent, name, readValue(true));
@@ -591,6 +612,10 @@ function parse(source, root, options) {
     }
 
     function parseMethod(parent, token) {
+        // Get the comment of the preceding line now (if one exists) in case the
+        // method is defined across multiple lines.
+        var commentText = cmnt();
+
         var type = token;
 
         /* istanbul ignore if */
@@ -622,6 +647,7 @@ function parse(source, root, options) {
         skip(")");
 
         var method = new Method(name, type, requestType, responseType, requestStream, responseStream);
+        method.comment = commentText;
         ifBlock(method, function parseMethod_block(token) {
 
             /* istanbul ignore else */
@@ -694,10 +720,6 @@ function parse(source, root, options) {
                 break;
 
             case "option":
-
-                /* istanbul ignore if */
-                if (!head)
-                    throw illegal(token);
 
                 parseOption(ptr, token);
                 skip(";");

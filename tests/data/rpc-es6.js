@@ -1,4 +1,4 @@
-/*eslint-disable block-scoped-var, no-redeclare, no-control-regex, no-prototype-builtins*/
+/*eslint-disable block-scoped-var, id-length, no-control-regex, no-magic-numbers, no-prototype-builtins, no-redeclare, no-shadow, no-var, sort-vars*/
 import * as $protobuf from "../../minimal";
 
 // Common aliases
@@ -50,7 +50,7 @@ export const MyService = $root.MyService = (() => {
 
     /**
      * Calls MyMethod.
-     * @function .myMethod
+     * @function myMethod
      * @memberof MyService
      * @instance
      * @param {IMyRequest} request MyRequest message or plain object
@@ -58,9 +58,9 @@ export const MyService = $root.MyService = (() => {
      * @returns {undefined}
      * @variation 1
      */
-    MyService.prototype.myMethod = function myMethod(request, callback) {
+    Object.defineProperty(MyService.prototype.myMethod = function myMethod(request, callback) {
         return this.rpcCall(myMethod, $root.MyRequest, $root.MyResponse, request, callback);
-    };
+    }, "name", { value: "MyMethod" });
 
     /**
      * Calls MyMethod.
@@ -88,6 +88,7 @@ export const MyRequest = $root.MyRequest = (() => {
      * Constructs a new MyRequest.
      * @exports MyRequest
      * @classdesc Represents a MyRequest.
+     * @implements IMyRequest
      * @constructor
      * @param {IMyRequest=} [properties] Properties to set
      */
@@ -274,6 +275,7 @@ export const MyResponse = $root.MyResponse = (() => {
      * Constructs a new MyResponse.
      * @exports MyResponse
      * @classdesc Represents a MyResponse.
+     * @implements IMyResponse
      * @constructor
      * @param {IMyResponse=} [properties] Properties to set
      */

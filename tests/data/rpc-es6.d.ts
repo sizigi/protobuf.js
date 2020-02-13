@@ -1,5 +1,4 @@
 import * as $protobuf from "../..";
-
 export class MyService extends $protobuf.rpc.Service {
     constructor(rpcImpl: $protobuf.RPCImpl, requestDelimited?: boolean, responseDelimited?: boolean);
     public static create(rpcImpl: $protobuf.RPCImpl, requestDelimited?: boolean, responseDelimited?: boolean): MyService;
@@ -16,7 +15,7 @@ export interface IMyRequest {
     path?: (string|null);
 }
 
-export class MyRequest {
+export class MyRequest implements IMyRequest {
     constructor(properties?: IMyRequest);
     public path: string;
     public static create(properties?: IMyRequest): MyRequest;
@@ -34,7 +33,7 @@ export interface IMyResponse {
     status?: (number|null);
 }
 
-export class MyResponse {
+export class MyResponse implements IMyResponse {
     constructor(properties?: IMyResponse);
     public status: number;
     public static create(properties?: IMyResponse): MyResponse;

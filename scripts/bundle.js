@@ -10,13 +10,10 @@ var header     = require("gulp-header");
 var gulpif     = require("gulp-if");
 var sourcemaps = require("gulp-sourcemaps");
 var uglify     = require("gulp-uglify");
-var gutil      = require("gulp-util");
 
 var buffer     = require("vinyl-buffer");
 var vinylfs    = require("vinyl-fs");
 var source     = require("vinyl-source-stream");
-
-var zopfli     = require("node-zopfli");
 
 var pkg = require(path.join(__dirname, "..", "package.json"));
 
@@ -58,10 +55,9 @@ function bundle(options) {
         options.exclude.forEach(bundler.exclude, bundler);
     return bundler
     .plugin(require("browserify-wrap"), {
-        // + global object for convenience
-        // + undefined var and global strict-mode for uglify
-        prefix: "(function(global,undefined){\"use strict\";",
-        suffix: "})(typeof window===\"object\"&&window||typeof self===\"object\"&&self||this);"
+        // undefined var and global strict-mode for uglify
+        prefix: "(function(undefined){\"use strict\";",
+        suffix: "})();"
     })
     .plugin(require("bundle-collapser/plugin"))
     .bundle()
@@ -70,15 +66,13 @@ function bundle(options) {
     .pipe(sourcemaps.init({ loadMaps: true }))
             .pipe(
                 gulpif(options.compress, uglify({
-                    mangleProperties: {
-                        regex: /^_/
-                    },
                     mangle: {
                         eval: true,
-                        toplevel: false
+                        properties: {
+                            regex: /^_/
+                        }
                     },
                     compress: {
-                        unused: true,
                         keep_fargs: false,
                         unsafe: true
                     },
@@ -93,24 +87,6 @@ function bundle(options) {
             }))
     .pipe(sourcemaps.write(".", { sourceRoot: "" }))
     .pipe(vinylfs.dest(options.target))
-    .on("log", gutil.log)
-    .on("error", gutil.log);
+    .on("log", console.log)
+    .on("error", console.error);
 }
-
-/**
- * Compresses a file using zopfli gzip.
- * @param {string} sourceFile Source file
- * @param {string} destinationFile Destination file
- * @param {function(?Error)} callback Node-style callback
- * @returns {undefined}
- */
-bundle.compress = function compress(sourceFile, destinationFile, callback) {
-    var src = fs.createReadStream(sourceFile);
-    var dst = fs.createWriteStream(destinationFile);
-    src.on("error", callback);
-    dst.on("error", callback);
-    dst.on("close", function() {
-        callback(null);
-    });
-    src.pipe(zopfli.createGzip()).pipe(dst);
-};

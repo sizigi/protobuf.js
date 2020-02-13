@@ -1,4 +1,4 @@
-/*eslint-disable block-scoped-var, no-redeclare, no-control-regex, no-prototype-builtins*/
+/*eslint-disable block-scoped-var, id-length, no-control-regex, no-magic-numbers, no-prototype-builtins, no-redeclare, no-shadow, no-var, sort-vars*/
 "use strict";
 
 var $protobuf = require("../../minimal");
@@ -30,6 +30,7 @@ $root.Message = (function() {
      * Constructs a new Message.
      * @exports Message
      * @classdesc Represents a Message.
+     * @implements IMessage
      * @constructor
      * @param {IMessage=} [properties] Properties to set
      */
@@ -481,7 +482,13 @@ $root.Message = (function() {
                 object.uint64Val = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
             } else
                 object.uint64Val = options.longs === String ? "0" : 0;
-            object.bytesVal = options.bytes === String ? "" : [];
+            if (options.bytes === String)
+                object.bytesVal = "";
+            else {
+                object.bytesVal = [];
+                if (options.bytes !== Array)
+                    object.bytesVal = $util.newBuffer(object.bytesVal);
+            }
             object.enumVal = options.enums === String ? "ONE" : 1;
         }
         if (message.stringVal != null && message.hasOwnProperty("stringVal"))
@@ -543,6 +550,7 @@ $root.Message = (function() {
 
     /**
      * SomeEnum enum.
+     * @name Message.SomeEnum
      * @enum {string}
      * @property {number} ONE=1 ONE value
      * @property {number} TWO=2 TWO value

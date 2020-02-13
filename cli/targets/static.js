@@ -2,7 +2,6 @@
 module.exports = static_target;
 
 var protobuf   = require("../.."),
-    cliUtil    = require("../util"),
     UglifyJS   = require("uglify-js"),
     espree     = require("espree"),
     escodegen  = require("escodegen"),
@@ -42,7 +41,7 @@ function static_target(root, options, callback) {
             }
             push("// Exported root namespace");
         }
-        var rootProp = cliUtil.safeProp(config.root || "default");
+        var rootProp = util.safeProp(config.root || "default");
         push((config.es6 ? "const" : "var") + " $root = $protobuf.roots" + rootProp + " || ($protobuf.roots" + rootProp + " = {});");
         buildNamespace(null, root);
         return callback(null, out.join("\n"));
@@ -98,7 +97,7 @@ function exportName(object, asInterface) {
 function escapeName(name) {
     if (!name)
         return "$root";
-    return cliUtil.reserved(name) ? name + "_" : name;
+    return util.isReserved(name) ? name + "_" : name;
 }
 
 function aOrAn(name) {
@@ -173,12 +172,9 @@ var shortVars = {
 function beautifyCode(code) {
     // Add semicolons
     code = UglifyJS.minify(code, {
-        fromString: true,
         compress: false,
         mangle: false,
-        output: {
-            beautify: true
-        }
+        output: { beautify: true }
     }).code;
     // Properly beautify
     var ast = espree.parse(code);
@@ -363,7 +359,7 @@ function buildType(ref, type) {
             "@interface " + escapeName("I" + type.name)
         ];
         type.fieldsArray.forEach(function(field) {
-            var prop = util.safeProp(field.name);
+            var prop = util.safeProp(field.name); // either .name or ["name"]
             prop = prop.substring(1, prop.charAt(0) === "[" ? prop.length - 1 : prop.length);
             var jsType = toJsType(field);
             if (field.optional)
@@ -398,7 +394,7 @@ function buildType(ref, type) {
                 jsType = jsType + "|null|undefined";
             pushComment([
                 field.comment || type.name + " " + field.name + ".",
-                "@member {" + jsType + "} " + escapeName(field.name),
+                "@member {" + jsType + "} " + field.name,
                 "@memberof " + exportName(type),
                 "@instance"
             ]);
@@ -646,7 +642,7 @@ function buildService(ref, service) {
         push("");
         pushComment([
             method.comment || "Calls " + method.name + ".",
-            "@function " + util.safeProp(lcName),
+            "@function " + lcName,
             "@memberof " + exportName(service),
             "@instance",
             "@param {" + exportName(method.resolvedRequestType, !config.forceMessage) + "} request " + method.resolvedRequestType.name + " message or plain object",
@@ -654,11 +650,11 @@ function buildService(ref, service) {
             "@returns {undefined}",
             "@variation 1"
         ]);
-        push(escapeName(service.name) + ".prototype" + util.safeProp(lcName) + " = function " + escapeName(lcName) + "(request, callback) {");
+        push("Object.defineProperty(" + escapeName(service.name) + ".prototype" + util.safeProp(lcName) + " = function " + escapeName(lcName) + "(request, callback) {");
             ++indent;
             push("return this.rpcCall(" + escapeName(lcName) + ", $root." + exportName(method.resolvedRequestType) + ", $root." + exportName(method.resolvedResponseType) + ", request, callback);");
             --indent;
-        push("};");
+        push("}, \"name\", { value: " + JSON.stringify(method.name) + " });");
         if (config.comments)
             push("");
         pushComment([
@@ -678,7 +674,7 @@ function buildEnum(ref, enm) {
     push("");
     var comment = [
         enm.comment || enm.name + " enum.",
-        enm.parent instanceof protobuf.Root ? "@exports " + escapeName(enm.name) : undefined,
+        enm.parent instanceof protobuf.Root ? "@exports " + escapeName(enm.name) : "@name " + exportName(enm),
         config.forceEnumString ? "@enum {number}" : "@enum {string}",
     ];
     Object.keys(enm.values).forEach(function(key) {

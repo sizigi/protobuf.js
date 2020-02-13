@@ -1,12 +1,11 @@
 import * as $protobuf from "../..";
-
 export interface ITest1 {
     field1?: (string|null);
     field2?: (number|null);
     field3?: (boolean|null);
 }
 
-export class Test1 {
+export class Test1 implements ITest1 {
     constructor(properties?: ITest1);
     public field1: string;
     public field2: number;
@@ -25,7 +24,7 @@ export class Test1 {
 export interface ITest2 {
 }
 
-export class Test2 {
+export class Test2 implements ITest2 {
     constructor(properties?: ITest2);
     public static create(properties?: ITest2): Test2;
     public static encode(message: ITest2, writer?: $protobuf.Writer): $protobuf.Writer;

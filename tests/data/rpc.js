@@ -1,4 +1,4 @@
-/*eslint-disable block-scoped-var, no-redeclare, no-control-regex, no-prototype-builtins*/
+/*eslint-disable block-scoped-var, id-length, no-control-regex, no-magic-numbers, no-prototype-builtins, no-redeclare, no-shadow, no-var, sort-vars*/
 "use strict";
 
 var $protobuf = require("../../minimal");
@@ -52,7 +52,7 @@ $root.MyService = (function() {
 
     /**
      * Calls MyMethod.
-     * @function .myMethod
+     * @function myMethod
      * @memberof MyService
      * @instance
      * @param {IMyRequest} request MyRequest message or plain object
@@ -60,9 +60,9 @@ $root.MyService = (function() {
      * @returns {undefined}
      * @variation 1
      */
-    MyService.prototype.myMethod = function myMethod(request, callback) {
+    Object.defineProperty(MyService.prototype.myMethod = function myMethod(request, callback) {
         return this.rpcCall(myMethod, $root.MyRequest, $root.MyResponse, request, callback);
-    };
+    }, "name", { value: "MyMethod" });
 
     /**
      * Calls MyMethod.
@@ -90,6 +90,7 @@ $root.MyRequest = (function() {
      * Constructs a new MyRequest.
      * @exports MyRequest
      * @classdesc Represents a MyRequest.
+     * @implements IMyRequest
      * @constructor
      * @param {IMyRequest=} [properties] Properties to set
      */
@@ -276,6 +277,7 @@ $root.MyResponse = (function() {
      * Constructs a new MyResponse.
      * @exports MyResponse
      * @classdesc Represents a MyResponse.
+     * @implements IMyResponse
      * @constructor
      * @param {IMyResponse=} [properties] Properties to set
      */
